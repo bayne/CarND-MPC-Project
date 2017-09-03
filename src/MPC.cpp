@@ -18,7 +18,7 @@ double dt = 0;
 // Lf was tuned until the the radius formed by the simulating the model
 // presented in the classroom matched the previous radius.
 //
-// This is the length from front to CoG that has a similar radius.
+// This is the length from front to the center of gravity that has a similar radius.
 const double Lf = 2.67;
 
 class FG_eval {
