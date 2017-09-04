@@ -3,11 +3,6 @@
 //
 
 #include "Telemetry.h"
-#include <utility>
-#include <vector>
-#include <cmath>
-#include <exception>
-
 
 using namespace std;
 
@@ -67,7 +62,9 @@ Telemetry::Telemetry(vector<pair<double, double>> & waypoints, double orientatio
 
   waypoint_model_ = polyfit(points_x, points_y, 3);
   crosstrack_error_ = polyeval(waypoint_model_, 0);
-  orientation_error_ = atan(waypoint_model_[1]);
+  orientation_error_ = -atan(waypoint_model_[1]);
+  steering_angle_ *= 0.436332313;
+  speed_ *= 0.447038889;
 
 }
 
@@ -85,7 +82,7 @@ const vector<pair<double, double>> Telemetry::localWaypoints() {
       }
   );
 
-  
+
   return local_waypoints;
 }
 

@@ -80,13 +80,16 @@ int main() {
           );
 
           /*
-          * TODO: Calculate steering angle and throttle using MPC.
+          * Calculate steering angle and throttle using MPC.
           *
           * Both are in between [-1, 1].
           *
           */
-          double steer_value = 0;
-          double throttle_value = 0;
+
+          pair<vector<pair<double, double>>, pair<double, double>> solution = mpc.Solve(telemetry);
+
+          double steer_value = solution.second.first;
+          double throttle_value = solution.second.second;
 
           json msgJson;
           // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
@@ -98,6 +101,11 @@ int main() {
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
+          for(pair<double, double> waypoint : solution.first) {
+            mpc_x_vals.push_back(waypoint.first);
+            mpc_y_vals.push_back(waypoint.second);
+          }
+
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Green line
 
@@ -107,20 +115,11 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-          for(double n = 0; n < 100.0; n += 10.0) {
-            try {
-              next_y_vals.push_back(telemetry.localWaypoint(n).second);
-              next_x_vals.push_back(n);
-            } catch (const out_of_range& oof) {
-              cout << "n:" << n << endl;
-              continue;
-            }
+          for(pair<double, double> waypoint : solution.first) {
+            next_x_vals.push_back(waypoint.first);
+            next_y_vals.push_back(telemetry.localWaypoint(waypoint.first).second);
           }
-          try {
-            cout << "orientation error:" << telemetry.orientation_error() << " cte:" << telemetry.crosstrack_error() << endl;
-          } catch (const out_of_range& oof) {
-
-          }
+          cout << "orientation error:" << telemetry.orientation_error() << " cte:" << telemetry.crosstrack_error() << endl;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
@@ -130,7 +129,7 @@ int main() {
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-//          std::cout << msg << std::endl;
+          std::cout << msg << std::endl;
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.
@@ -140,7 +139,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(100));
+          this_thread::sleep_for(chrono::milliseconds(0));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
