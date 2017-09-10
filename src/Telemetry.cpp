@@ -63,13 +63,11 @@ Telemetry::Telemetry(vector<pair<double, double>> & waypoints, double orientatio
 
   waypoint_model_ = polyfit(points_x, points_y, 3);
   crosstrack_error_ = polyeval(waypoint_model_, 0);
-//  crosstrack_error_ = waypoint_model_[0];
   orientation_error_ = -atan(waypoint_model_[1]);
-//  steering_angle_ *= 0.436332313;
-//  speed_ *= 0.447038889;
 
 }
 
+// Returns the waypoints mapped to the vehicle-space
 const vector<pair<double, double>> Telemetry::localWaypoints() {
   vector<pair<double, double>> local_waypoints;
   transform(
@@ -86,11 +84,4 @@ const vector<pair<double, double>> Telemetry::localWaypoints() {
 
 
   return local_waypoints;
-}
-
-pair<double, double> Telemetry::localWaypoint(double x) {
-  return {
-      x,
-      polyeval(waypoint_model_, x)
-  };
 }

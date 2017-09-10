@@ -6,20 +6,6 @@
 
 using CppAD::AD;
 
-
-
-
-// This value assumes the model presented in the classroom is used.
-//
-// It was obtained by measuring the radius formed by running the vehicle in the
-// simulator around in a circle with a constant steering angle and velocity on a
-// flat terrain.
-//
-// Lf was tuned until the the radius formed by the simulating the model
-// presented in the classroom matched the previous radius.
-//
-// This is the length from front to the center of gravity that has a similar radius.
-
 class FG_eval {
 public:
   // Fitted polynomial coefficients
@@ -43,14 +29,14 @@ public:
      */
     this->timestep_duration = MPC::kTimestepDuration;
     this->reference_speed = MPC::kReferenceSpeed;
-    
+
     this->crosstrack_error_scale = MPC::crosstrack_error_scale;
     this->orientation_error_scale = MPC::orientation_error_scale;
     this->steering_angle_scale = MPC::steering_angle_scale;
     this->accelerator_scale = MPC::accelerator_scale;
     this->steering_angle_smooth_scale = MPC::steering_angle_smooth_scale;
-    this->accelerator_smooth_scale = MPC::accelerator_smooth_scale;    
-    
+    this->accelerator_smooth_scale = MPC::accelerator_smooth_scale;
+
     this->lf = Telemetry::kLf;
   }
 

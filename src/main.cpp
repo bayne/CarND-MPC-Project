@@ -14,11 +14,6 @@
 using json = nlohmann::json;
 using namespace std;
 
-// For converting back and forth between radians and degrees.
-constexpr double pi() { return M_PI; }
-double deg2rad(double x) { return x * pi() / 180; }
-double rad2deg(double x) { return x * 180 / pi(); }
-
 // Checks if the SocketIO event has JSON data.
 // If there is data the JSON object in string format will be returned,
 // else the empty string "" will be returned.
@@ -68,7 +63,9 @@ int main() {
                 }
             );
           }
-
+          /*
+           * Create the telemetry object
+           */
           Telemetry telemetry(
               waypoints,
               j[1]["psi"],
@@ -81,27 +78,18 @@ int main() {
           );
 
           /*
-          * Calculate steering angle and throttle using MPC.
-          *
-          * Both are in between [-1, 1].
-          *
-          */
-
+           * Solve for the actuations values from the given telemetry
+           */
           pair<vector<pair<double, double>>, pair<double, double>> solution = mpc.Solve(telemetry);
 
           double steer_value = solution.second.first;
           double throttle_value = solution.second.second;
 
           json msgJson;
-          // NOTE: Remember to divide by deg2rad(25) before you send the steering value back.
-          // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
-//          msgJson["throttle"] = 0.51;
-//          msgJson["steering_angle"] = 0;
-//          msgJson["throttle"] = 0;
 
-          //Display the MPC predicted trajectory 
+          //Display the MPC predicted trajectory
           vector<double> mpc_x_vals;
           vector<double> mpc_y_vals;
 
@@ -123,18 +111,14 @@ int main() {
             next_x_vals.push_back(waypoint.first);
             next_y_vals.push_back(waypoint.second);
           }
-          cout << "orientation:" << telemetry.orientation() << " cte:" << telemetry.crosstrack_error() << endl;
-          cout << "orientation error:" << telemetry.orientation_error() << " cte:" << telemetry.crosstrack_error() << endl;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
           // the points in the simulator are connected by a Yellow line
-
           msgJson["next_x"] = next_x_vals;
           msgJson["next_y"] = next_y_vals;
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-//          std::cout << msg << std::endl;
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.

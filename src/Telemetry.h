@@ -15,16 +15,25 @@ using namespace std;
 class Telemetry {
 private:
 
+  // The waypoints to be followed in global coordinates
   vector<pair<double, double>> & waypoints_;
-  double orientation_;
+
+  // In global coordinates
   double x_;
   double y_;
+  // --
+
+  double orientation_;
   double steering_angle_;
   double throttle_;
   double speed_;
+
+  // The wayspoints described as a polynomial model
   Eigen::VectorXd waypoint_model_;
   double crosstrack_error_;
   double orientation_error_;
+
+  // A hyperparameter for tuning the expected delay
   double latency_;
 
 public:
@@ -44,26 +53,21 @@ public:
   );
 
   Eigen::VectorXd waypoint_model() const { return waypoint_model_; }
-  double orientation() const { return -speed_ * steering_angle_  * latency_ / kLf; }
-//  double orientation() const { return orientation_; }
   double x() const { return x_; }
   double y() const { return y_; }
-
-  double local_x() const { return speed_ * latency_; }
-  double local_y() const { return 0; }
-
   double steering_angle() const { return steering_angle_; }
   double throttle() const { return throttle_; }
-  double speed() const { return speed_ + throttle_*latency_; }
 
+  // Returns the waypoints mapped to the vehicle-space
   const vector<pair<double, double>> localWaypoints();
 
-  pair<double, double> localWaypoint(double x);
-
+  // The following are predictions for the given latency
+  double orientation() const { return -speed_ * steering_angle_  * latency_ / kLf; }
+  double local_x() const { return speed_ * latency_; }
+  double local_y() const { return 0; }
+  double speed() const { return speed_ + throttle_*latency_; }
   double crosstrack_error()const { return crosstrack_error_ + speed_ * sin(orientation_error_) * latency_; }
-
   double orientation_error()const { return orientation_error_ - orientation(); }
-
 };
 
 
