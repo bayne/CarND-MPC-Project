@@ -40,7 +40,7 @@ Eigen::VectorXd polyfit(Eigen::VectorXd xvals, Eigen::VectorXd yvals,
 }
 
 Telemetry::Telemetry(vector<pair<double, double>> & waypoints, double orientation, double x, double y,
-                     double steering_angle, double throttle, double speed
+                     double steering_angle, double throttle, double speed, double latency
 )
     : waypoints_(waypoints),
       orientation_(orientation),
@@ -48,7 +48,8 @@ Telemetry::Telemetry(vector<pair<double, double>> & waypoints, double orientatio
       y_(y),
       steering_angle_(steering_angle),
       throttle_(throttle),
-      speed_(speed)
+      speed_(speed),
+      latency_(latency)
 {
   auto points_x = Eigen::VectorXd(localWaypoints().size());
   auto points_y = Eigen::VectorXd(localWaypoints().size());
@@ -62,9 +63,10 @@ Telemetry::Telemetry(vector<pair<double, double>> & waypoints, double orientatio
 
   waypoint_model_ = polyfit(points_x, points_y, 3);
   crosstrack_error_ = polyeval(waypoint_model_, 0);
+//  crosstrack_error_ = waypoint_model_[0];
   orientation_error_ = -atan(waypoint_model_[1]);
-  steering_angle_ *= 0.436332313;
-  speed_ *= 0.447038889;
+//  steering_angle_ *= 0.436332313;
+//  speed_ *= 0.447038889;
 
 }
 

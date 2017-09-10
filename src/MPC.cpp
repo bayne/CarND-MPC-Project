@@ -1,4 +1,5 @@
 #include "MPC.h"
+#include "Telemetry.h"
 #include <cppad/cppad.hpp>
 #include <cppad/ipopt/solve.hpp>
 #include "Eigen-3.3/Eigen/Core"
@@ -18,7 +19,6 @@ using CppAD::AD;
 // presented in the classroom matched the previous radius.
 //
 // This is the length from front to the center of gravity that has a similar radius.
-const double Lf = 2.67;
 
 class FG_eval {
 public:
@@ -26,6 +26,13 @@ public:
   Eigen::VectorXd coeffs;
   double timestep_duration;
   double reference_speed;
+  double lf;
+  double crosstrack_error_scale;
+  double orientation_error_scale;
+  double steering_angle_scale;
+  double accelerator_scale;
+  double steering_angle_smooth_scale;
+  double accelerator_smooth_scale;
 
   FG_eval(Eigen::VectorXd coeffs) {
     this->coeffs = coeffs;
@@ -36,6 +43,15 @@ public:
      */
     this->timestep_duration = MPC::kTimestepDuration;
     this->reference_speed = MPC::kReferenceSpeed;
+    
+    this->crosstrack_error_scale = MPC::crosstrack_error_scale;
+    this->orientation_error_scale = MPC::orientation_error_scale;
+    this->steering_angle_scale = MPC::steering_angle_scale;
+    this->accelerator_scale = MPC::accelerator_scale;
+    this->steering_angle_smooth_scale = MPC::steering_angle_smooth_scale;
+    this->accelerator_smooth_scale = MPC::accelerator_smooth_scale;    
+    
+    this->lf = Telemetry::kLf;
   }
 
   typedef CPPAD_TESTVECTOR(AD<double>) ADvector;
@@ -47,21 +63,21 @@ public:
 
     // The part of the cost based on the reference state.
     for (int t = 0; t < MPC::kTimesteps; t++) {
-      fg[0] += CppAD::pow(vars[MPC::kCrosstrackErrorStart + t], 2);
-      fg[0] += CppAD::pow(vars[MPC::kOrientationErrorStart + t], 2);
+      fg[0] += crosstrack_error_scale * CppAD::pow(vars[MPC::kCrosstrackErrorStart + t], 2);
+      fg[0] += orientation_error_scale * CppAD::pow(vars[MPC::kOrientationErrorStart + t], 2);
       fg[0] += CppAD::pow(vars[MPC::kSpeedStart + t] - reference_speed, 2);
     }
 
     // Minimize the use of actuators.
     for (int t = 0; t < MPC::kTimesteps - 1; t++) {
-      fg[0] += CppAD::pow(vars[MPC::kSteeringAngleStart + t], 2);
-      fg[0] += CppAD::pow(vars[MPC::kAcceleratorStart + t], 2);
+      fg[0] += steering_angle_scale * CppAD::pow(vars[MPC::kSteeringAngleStart + t], 2);
+      fg[0] += accelerator_scale * CppAD::pow(vars[MPC::kAcceleratorStart + t], 2);
     }
 
     // Minimize the value gap between sequential actuations.
     for (int t = 0; t < MPC::kTimesteps - 2; t++) {
-      fg[0] += CppAD::pow(vars[MPC::kSteeringAngleStart + t + 1] - vars[MPC::kSteeringAngleStart + t], 2);
-      fg[0] += CppAD::pow(vars[MPC::kAcceleratorStart + t + 1] - vars[MPC::kAcceleratorStart + t], 2);
+      fg[0] += steering_angle_smooth_scale * CppAD::pow(vars[MPC::kSteeringAngleStart + t + 1] - vars[MPC::kSteeringAngleStart + t], 2);
+      fg[0] += accelerator_smooth_scale * CppAD::pow(vars[MPC::kAcceleratorStart + t + 1] - vars[MPC::kAcceleratorStart + t], 2);
     }
 
     //
@@ -103,8 +119,8 @@ public:
       AD<double> delta0 = vars[MPC::kSteeringAngleStart + t - 1];
       AD<double> a0 = vars[MPC::kAcceleratorStart + t - 1];
 
-      AD<double> f0 = coeffs[0] + coeffs[1] * x0;
-      AD<double> psides0 = CppAD::atan(coeffs[1]);
+      AD<double> f0 = coeffs[0] + coeffs[1] * x0 + coeffs[2] * x0 * x0 + coeffs[3] * x0 * x0 * x0;
+      AD<double> psides0 = CppAD::atan(coeffs[1] + 2 * coeffs[2] * x0 + 3 * coeffs[3] * x0 * x0);
 
       // Here's `x` to get you started.
       // The idea here is to constraint this value to be 0.
@@ -118,12 +134,12 @@ public:
       // epsi[t+1] = psi[t] - psides[t] + v[t] * delta[t] / Lf * MPC::kTimestepDuration
       fg[1 + MPC::kXStart + t] = x1 - (x0 + v0 * CppAD::cos(psi0) * timestep_duration);
       fg[1 + MPC::kYStart + t] = y1 - (y0 + v0 * CppAD::sin(psi0) * timestep_duration);
-      fg[1 + MPC::kOrientationStart + t] = psi1 - (psi0 + v0 * delta0 / Lf * timestep_duration);
+      fg[1 + MPC::kOrientationStart + t] = psi1 - (psi0 + v0 * delta0 / lf * timestep_duration);
       fg[1 + MPC::kSpeedStart + t] = v1 - (v0 + a0 * timestep_duration);
       fg[1 + MPC::kCrosstrackErrorStart + t] =
           cte1 - ((f0 - y0) + (v0 * CppAD::sin(epsi0) * timestep_duration));
       fg[1 + MPC::kOrientationErrorStart + t] =
-          epsi1 - ((psi0 - psides0) + v0 * delta0 / Lf * timestep_duration);
+          epsi1 - ((psi0 - psides0) + v0 * delta0 / lf * timestep_duration);
     }
   }
 };
@@ -167,8 +183,8 @@ pair<vector<pair<double, double>>, pair<double, double>> MPC::Solve(const Teleme
 
   // No Limits for non actuators
   for (i = 0; i < kSteeringAngleStart; i++) {
-    vars_lowerbound[i] = -1e9;
-    vars_upperbound[i] = 1e9;
+    vars_lowerbound[i] = -1.0e19;
+    vars_upperbound[i] = 1.0e19;
   }
 
   // Limits for steering angle actuator
@@ -257,7 +273,7 @@ pair<vector<pair<double, double>>, pair<double, double>> MPC::Solve(const Teleme
     return {
         trajectory,
         {
-            -solution.x[kSteeringAngleStart] / kMaxSteeringAngle,
+            -solution.x[kSteeringAngleStart] / (kMaxSteeringAngle * Telemetry::kLf),
             solution.x[kAcceleratorStart]
         }
     };

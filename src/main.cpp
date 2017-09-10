@@ -76,7 +76,8 @@ int main() {
               j[1]["y"],
               j[1]["steering_angle"],
               j[1]["throttle"],
-              j[1]["speed"]
+              j[1]["speed"],
+              0.1
           );
 
           /*
@@ -96,6 +97,9 @@ int main() {
           // Otherwise the values will be in between [-deg2rad(25), deg2rad(25] instead of [-1, 1].
           msgJson["steering_angle"] = steer_value;
           msgJson["throttle"] = throttle_value;
+//          msgJson["throttle"] = 0.51;
+//          msgJson["steering_angle"] = 0;
+//          msgJson["throttle"] = 0;
 
           //Display the MPC predicted trajectory 
           vector<double> mpc_x_vals;
@@ -115,10 +119,11 @@ int main() {
           //Display the waypoints/reference line
           vector<double> next_x_vals;
           vector<double> next_y_vals;
-          for(pair<double, double> waypoint : solution.first) {
+          for (pair<double, double> waypoint : telemetry.localWaypoints()) {
             next_x_vals.push_back(waypoint.first);
-            next_y_vals.push_back(telemetry.localWaypoint(waypoint.first).second);
+            next_y_vals.push_back(waypoint.second);
           }
+          cout << "orientation:" << telemetry.orientation() << " cte:" << telemetry.crosstrack_error() << endl;
           cout << "orientation error:" << telemetry.orientation_error() << " cte:" << telemetry.crosstrack_error() << endl;
 
           //.. add (x,y) points to list here, points are in reference to the vehicle's coordinate system
@@ -129,7 +134,7 @@ int main() {
 
 
           auto msg = "42[\"steer\"," + msgJson.dump() + "]";
-          std::cout << msg << std::endl;
+//          std::cout << msg << std::endl;
           // Latency
           // The purpose is to mimic real driving conditions where
           // the car does actuate the commands instantly.
@@ -139,7 +144,7 @@ int main() {
           //
           // NOTE: REMEMBER TO SET THIS TO 100 MILLISECONDS BEFORE
           // SUBMITTING.
-          this_thread::sleep_for(chrono::milliseconds(0));
+          this_thread::sleep_for(chrono::milliseconds(100));
           ws.send(msg.data(), msg.length(), uWS::OpCode::TEXT);
         }
       } else {
