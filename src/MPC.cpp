@@ -167,8 +167,8 @@ pair<vector<pair<double, double>>, pair<double, double>> MPC::Solve(const Teleme
 
   // No Limits for non actuators
   for (i = 0; i < kSteeringAngleStart; i++) {
-    vars_lowerbound[i] = numeric_limits<double>::min();
-    vars_upperbound[i] = numeric_limits<double>::max();
+    vars_lowerbound[i] = -1e9;
+    vars_upperbound[i] = 1e9;
   }
 
   // Limits for steering angle actuator
